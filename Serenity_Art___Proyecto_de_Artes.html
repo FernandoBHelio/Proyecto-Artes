@@ -8,11 +8,17 @@ canvas{display:block}
 #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(16,21,26,.6);color:#f4ead2;text-align:center;padding:24px;cursor:pointer}
 #start h1{font-family:Georgia,serif;font-size:2.2rem;margin:0 0 .5rem}
 #start p{margin:.2rem 0;max-width:420px}
+.ai-wrap{display:flex;align-items:center;justify-content:center;gap:22px;width:min(96vw,1220px);max-height:92vh}
+.ai-art{flex:1 1 56%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ai-art img{max-width:100%;max-height:80vh;object-fit:contain;border:6px solid #e0b44a;outline:2px solid #8a6420;border-radius:3px;box-shadow:0 10px 50px #000;background:#f3eee0}
+.ai-panel{flex:0 0 min(440px,42%);max-height:86vh;display:flex;flex-direction:column;gap:10px;background:#1a1410;border:2px solid #c8a24a;border-radius:12px;padding:16px;color:#e6c36a;font-family:Georgia,serif;box-sizing:border-box}
+@media (max-width:820px){.ai-wrap{flex-direction:column;overflow-y:auto;align-items:stretch;gap:12px}.ai-art{flex:none}.ai-art img{max-height:36vh}.ai-panel{flex:none;width:100%;max-height:none}}
 </style></head><body>
 <div id="start"><h1>Serenity Art</h1><p style="letter-spacing:.25em;font-size:.85rem">PROYECTO DE ARTES</p><p>Toca o haz clic para entrar y caminar.</p>
 <p><b>W A S D</b> o flechas: moverte · <b>Mouse</b>: mirar (solo muévelo) · <b>Shift</b>: correr</p>
 <p><b>Clic derecho</b> en un cuadro: verlo en grande · Mantén <b>B</b>: catalejo (rueda = más/menos zoom)</p>
 <p><b>M</b>: mapa y teletransporte (también hay un mapa en la entrada) · <b>V</b>: ampliar el cuadro que miras</p>
+<p><b>G</b>: preguntar al guía por el cuadro que miras · <b>L</b>: configurar API Key de OpenRouter (activa la IA en G)</p>
 <p>Celular: dedo izquierdo mueve, dedo derecho mira, toca un cuadro para ampliarlo y mantén 🔭 para el catalejo.</p></div>
 <div id="hud">Planta baja</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -266,12 +272,37 @@ const o=new T.Mesh(gO,mG);o.position.z=.05;const n=new T.Mesh(gI,mC);n.position.
 const p=new T.Mesh(gP,new T.MeshBasicMaterial({color:0xf3eee0}));p.position.z=.13;p.userData={sala:17,cuadro:j+1};
 const pm=new T.Mesh(gL,mPl);pm.position.set(0,-.9,.03);pm.userData=p.userData;
 grp.add(o,n,p,pm);scene.add(grp);frames[16][j]=p;plaques[16][j]=pm;todos.push(p,pm)}}
-function ponerNombre(sala,cuadro,txt){const m=plaques[sala-1]&&plaques[sala-1][cuadro-1];if(!m)return;m.userData.nombre=txt||'';if(!m.material.map){const c=document.createElement('canvas');c.width=256;c.height=52;m.material=new T.MeshBasicMaterial({map:new T.CanvasTexture(c)})}placa(m,txt||'')}
+function ponerNombre(sala,cuadro,txt){const m=plaques[sala-1]&&plaques[sala-1][cuadro-1];if(!m)return;m.userData.nombre=txt||'';if(frames[sala-1]&&frames[sala-1][cuadro-1])frames[sala-1][cuadro-1].userData.nombre=txt||'';if(!m.material.map){const c=document.createElement('canvas');c.width=256;c.height=52;m.material=new T.MeshBasicMaterial({map:new T.CanvasTexture(c)})}placa(m,txt||'')}
 function ponerImagen(sala,cuadro,url){const f=frames[sala-1]&&frames[sala-1][cuadro-1];if(!f||!url)return;
 TL.load(url,t=>{f.userData.url=url;f.material.map=t;f.material.color.set(0xffffff);f.material.needsUpdate=true;
 const r=t.image.width/t.image.height;let w=1.2,h=w/r;if(h>.9){h=.9;w=h*r}f.scale.set(w/1.2,h/.9,1)},undefined,()=>console.warn('No se pudo cargar',url))}
 window.ponerImagen=ponerImagen;window.ponerNombre=ponerNombre;
-GALERIA.forEach((g,i)=>g.cuadros.forEach((u,j)=>{if(!u)return;if(typeof u==='string')ponerImagen(i+1,j+1,u);else{if(u.img)ponerImagen(i+1,j+1,u.img);ponerNombre(i+1,j+1,u.nombre)}}));
+GALERIA.forEach((g,i)=>g.cuadros.forEach((u,j)=>{if(!u)return;if(typeof u==='string')ponerImagen(i+1,j+1,u);else{if(u.img)ponerImagen(i+1,j+1,u.img);ponerNombre(i+1,j+1,u.nombre);if(u.desc&&frames[i]&&frames[i][j])frames[i][j].userData.desc=u.desc}}));
+function descripcionGenerica(u){
+  if(!u)return'';
+  if(u.desc)return u.desc;
+  if(!u.sala)return'Este es el emblema oficial de Serenity Art · Proyecto de Artes, ubicado en el muro principal como bienvenida al recorrido artístico y homenaje a la creatividad compartida en la galería.';
+  const nombre=u.nombre||'autor anónimo';
+  const sala=GALERIA[u.sala-1]?GALERIA[u.sala-1].sala:'Galería';
+  if(u.sala===17){
+    const fam=[
+      `"${nombre}" (cuadro ${u.cuadro}) forma parte del Salón de la Fama: una postal entrañable de anécdotas, complicidad y momentos memorables vividos por el grupo.`,
+      `En "${nombre}" (cuadro ${u.cuadro}) se conserva una escena espontánea del Salón de la Fama, testimonio del compañerismo y buen humor fuera del aula.`,
+      `La pieza "${nombre}" (cuadro ${u.cuadro}) rescata un instante especial del equipo de Serenity Art, capturando la cercanía y energía cotidiana de sus integrantes.`,
+      `Exhibida en el Salón de la Fama, "${nombre}" (cuadro ${u.cuadro}) celebra la amistad y las historias compartidas que dieron identidad a este proyecto.`
+    ];
+    return fam[(u.cuadro||0)%fam.length];
+  }
+  const tpl=[
+    `Obra exhibida en ${sala} (cuadro ${u.cuadro}), atribuida a ${nombre}. Destaca por su propuesta visual personal, equilibrio compositivo y sensibilidad expresiva dentro de la muestra.`,
+    `Pieza de ${nombre} en ${sala} (cuadro ${u.cuadro}). Invita a detenerse en sus contrastes, uso del color y carácter artístico como reflejo del proceso creativo de la semana.`,
+    `Trabajo realizado por ${nombre} para ${sala} (cuadro ${u.cuadro}). Combina intención estética y exploración técnica para transmitir una mirada propia al espectador.`,
+    `Creación de ${nombre} presentada en ${sala} (cuadro ${u.cuadro}). Sobresale por la armonía de sus formas, la atmósfera que proyecta y el cuidado en los detalles.`,
+    `En ${sala} (cuadro ${u.cuadro}), ${nombre} aporta una composición singular que dialoga con el resto de la sala mediante ritmo visual, textura y expresividad.`,
+    `Cuadro ${u.cuadro} de ${sala}, obra de ${nombre}. Representa un ejercicio de observación y creatividad donde la luz y el trazo construyen una escena con voz propia.`
+  ];
+  return tpl[((u.sala||1)*7+(u.cuadro||1))%tpl.length];
+}
 // Mira un cuadro: E = elegir imagen de tu equipo · N = escribir el nombre
 const fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.style.display='none';document.body.appendChild(fi);
 let objetivo=null;const rc=new T.Raycaster();
@@ -281,7 +312,7 @@ nb.innerHTML='<input maxlength="40" placeholder="Nombre de la obra" style="font:
 document.body.appendChild(nb);const ni=nb.firstChild;let nt=null;
 ni.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){if(nt)ponerNombre(nt.sala,nt.cuadro,ni.value);nb.style.display='none'}if(e.key==='Escape')nb.style.display='none'});
 ni.addEventListener('keyup',e=>e.stopPropagation());
-addEventListener('keydown',e=>{if(!objetivo)return;
+addEventListener('keydown',e=>{if(!objetivo||modal())return;
 if(e.code==='KeyE'){fiT=objetivo.userData;if(document.pointerLockElement)document.exitPointerLock();fi.click()}
 if(e.code==='KeyN'){if(document.pointerLockElement)document.exitPointerLock();nt=objetivo.userData;ni.value='';nb.style.display='flex';setTimeout(()=>ni.focus(),0)}});
 {const ch=document.createElement('div');ch.style.cssText='position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 2px #000;pointer-events:none';document.body.appendChild(ch)}
@@ -294,14 +325,15 @@ const sb=document.createElement('div');sb.style.cssText='position:fixed;inset:0;
 sb.innerHTML='<div style="background:#1a1410;border:2px solid #c8a24a;border-radius:12px;padding:18px 20px;text-align:center;color:#e6c36a;font-family:Georgia,serif;width:min(86vw,340px)"><div style="font-size:20px;margin-bottom:4px">✦ Palabra secreta ✦</div><div id="sm" style="font-size:13px;opacity:.85;margin-bottom:10px">El árbol susurra... ¿qué dices?</div><input maxlength="20" style="font:18px Georgia,serif;padding:8px 12px;width:80%;border-radius:8px;border:2px solid #c8a24a;text-align:center"></div>';
 document.body.appendChild(sb);const si=sb.querySelector('input'),sm=sb.querySelector('#sm');
 // ====== ZOOM 1: clic derecho en un cuadro = verlo en grande ======
-let lbOn=false,lbT=0;
+let lbOn=false,lbT=0,lbCur=null;
 const lb=document.createElement('div');lb.style.cssText='position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(10,8,6,.88);z-index:7;cursor:zoom-out';
-lb.innerHTML='<img alt="" style="max-width:92vw;max-height:80vh;object-fit:contain;border:6px solid #e0b44a;outline:2px solid #8a6420;border-radius:3px;box-shadow:0 10px 50px #000;background:#f3eee0"><div style="color:#e6c36a;font:italic 20px Georgia,serif;text-align:center"></div><div style="color:#f4ead2;opacity:.6;font:12px system-ui,sans-serif">Clic, Esc o clic derecho para cerrar</div>';
-document.body.appendChild(lb);const lbImg=lb.children[0],lbCap=lb.children[1];
-function abrirLb(u){lbImg.src=u.url;const s=u.sala?GALERIA[u.sala-1].sala:(u.titulo||'');lbCap.textContent=u.nombre?s+' · '+u.nombre:s;lb.style.display='flex';lbOn=true;lbT=Date.now()}
-function cerrarLb(){lb.style.display='none';lbOn=false}
+lb.innerHTML='<img alt="" style="max-width:92vw;max-height:76vh;object-fit:contain;border:6px solid #e0b44a;outline:2px solid #8a6420;border-radius:3px;box-shadow:0 10px 50px #000;background:#f3eee0"><div style="color:#e6c36a;font:italic 20px Georgia,serif;text-align:center"></div><button type="button" style="font:15px Georgia,serif;padding:7px 14px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">✨ Preguntar al guía (G)</button><div style="color:#f4ead2;opacity:.6;font:12px system-ui,sans-serif">Clic, Esc o clic derecho para cerrar</div>';
+document.body.appendChild(lb);const lbImg=lb.children[0],lbCap=lb.children[1],lbAiBtn=lb.children[2];
+lbAiBtn.addEventListener('click',e=>{e.stopPropagation();if(lbCur)abrirGuia(lbCur)});
+function abrirLb(u){lbCur=u;lbImg.src=u.url;const s=u.sala?GALERIA[u.sala-1].sala:(u.titulo||'');lbCap.textContent=u.nombre?s+' · '+u.nombre:s;lb.style.display='flex';lbOn=true;lbT=Date.now()}
+function cerrarLb(){lb.style.display='none';lbOn=false;lbCur=null}
 lb.addEventListener('click',e=>{e.stopPropagation();if(Date.now()-lbT>350)cerrarLb()});
-addEventListener('keydown',e=>{if(e.code==='Escape'&&lbOn)cerrarLb()});
+addEventListener('keydown',e=>{if(e.code==='Escape'&&lbOn&&!aiOn&&!keyOn)cerrarLb()});
 // ====== ZOOM 2: mantener B = catalejo (rueda del mouse ajusta el aumento) ======
 let zoomOn=false,zl=4;
 const cat=document.createElement('div');
@@ -359,14 +391,285 @@ document.getElementById('start').addEventListener('pointerdown',()=>{mb.style.di
 function abrirMapaHit(cx,cy){if(modal())return false;const lk=!!document.pointerLockElement;
 rc.setFromCamera({x:lk?0:cx/innerWidth*2-1,y:lk?0:-(cy/innerHeight)*2+1},cam);
 const h=rc.intersectObjects(mapMeshes)[0];if(h&&h.distance<8){abrirTp();return true}return false}
+// ====== ACOMPAÑANTE IA (OPENROUTER) + DESCRIPCIONES GENÉRICAS (G / L) ======
+const OR_KEY_LS='serenity_or_key',OR_MODEL_LS='serenity_or_model';
+let orKey=localStorage.getItem(OR_KEY_LS)||'',orModel=localStorage.getItem(OR_MODEL_LS)||'openrouter/free';
+let keyOn=false,aiOn=false,aiCur=null,aiHist=[],aiBusy=false,aiReqId=0,ttsUtter=null;
+const aiCache=Object.create(null);
+
+const toastEl=document.createElement('div');
+toastEl.style.cssText='position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:none;z-index:11;background:rgba(26,20,16,.94);color:#e6c36a;border:1px solid #c8a24a;border-radius:8px;padding:8px 14px;font:14px Georgia,serif;pointer-events:none;text-align:center;max-width:86vw';
+document.body.appendChild(toastEl);
+let toastTimer=0;
+function mostrarAviso(txt){toastEl.textContent=txt;toastEl.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toastEl.style.display='none'},2500)}
+
+function clearKeys(){for(const k in keys)keys[k]=0}
+
+function obraActual(){
+  if(lbOn&&lbCur)return Object.assign({},lbCur,{imgEl:lbCur.imgEl||(lbImg.complete&&lbImg.naturalWidth?lbImg:null)});
+  const lk=!!document.pointerLockElement;
+  rc.setFromCamera({x:0,y:0},cam);
+  const hl=rc.intersectObject(logoMesh)[0],h=rc.intersectObjects(todos)[0];
+  if(hl&&hl.distance<16&&(!h||hl.distance<h.distance)){
+    if(!logoUrl)return null;
+    return{url:logoUrl,titulo:'Serenity Art · Logo',imgEl:logoMesh.material.map&&logoMesh.material.map.image};
+  }
+  if(!h||h.distance>=10)return null;
+  const u=h.object.userData,f=frames[u.sala-1]&&frames[u.sala-1][u.cuadro-1];
+  if(!f||!f.userData.url)return null;
+  const p=plaques[u.sala-1]&&plaques[u.sala-1][u.cuadro-1];
+  return Object.assign({},f.userData,{nombre:(p&&p.userData.nombre)||f.userData.nombre||'',imgEl:f.material.map&&f.material.map.image});
+}
+
+function imagenADataUrl(imgEl,url){
+  return new Promise((res,rej)=>{
+    const encode=img=>{
+      try{
+        const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        if(!w||!h)return rej(new Error('La imagen aún no está lista.'));
+        const max=512,sc=Math.min(1,max/Math.max(w,h));
+        const cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+        const c=document.createElement('canvas');c.width=cw;c.height=ch;
+        c.getContext('2d').drawImage(img,0,0,cw,ch);
+        res(c.toDataURL('image/jpeg',0.82));
+      }catch(err){
+        rej(new Error('El navegador bloqueó el acceso a la imagen (abre la galería mediante un servidor HTTP local, no con file://).'));
+      }
+    };
+    if(imgEl&&(imgEl.complete===undefined||imgEl.complete)&&(imgEl.naturalWidth||imgEl.width)){encode(imgEl);return}
+    if(!url){rej(new Error('No hay URL de imagen disponible.'));return}
+    const im=new Image();im.crossOrigin='anonymous';
+    im.onload=()=>encode(im);
+    im.onerror=()=>rej(new Error('No se pudo cargar la imagen para enviarla a la IA.'));
+    im.src=url;
+  });
+}
+
+// Modal L: configurar API Key de OpenRouter
+const keyEl=document.createElement('div');
+keyEl.style.cssText='position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,6,.75);z-index:10;padding:14px;box-sizing:border-box';
+keyEl.innerHTML='<div style="background:#1a1410;border:2px solid #c8a24a;border-radius:12px;padding:18px;color:#e6c36a;font-family:Georgia,serif;width:min(94vw,440px);box-sizing:border-box">'
++'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:20px">✦ OpenRouter · Guía IA ✦</div><button type="button" class="kx" style="font:15px Georgia,serif;padding:4px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">✕</button></div>'
++'<div class="kst" style="font-size:13px;padding:6px 10px;border-radius:6px;margin-bottom:10px;border:1px solid #8a6420"></div>'
++'<label style="display:block;font-size:13px;margin-bottom:4px;color:#f4ead2">API Key de OpenRouter</label>'
++'<div style="display:flex;gap:6px;margin-bottom:10px"><input type="password" class="kin" placeholder="sk-or-v1-..." autocomplete="off" style="flex:1;min-width:0;font:15px system-ui,sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#f4ead2"><button type="button" class="kvis" title="Mostrar u ocultar" style="font:15px system-ui,sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">👁</button></div>'
++'<label style="display:block;font-size:13px;margin-bottom:4px;color:#f4ead2">Modelo</label>'
++'<input type="text" class="kmod" placeholder="openrouter/free" style="width:100%;box-sizing:border-box;font:14px system-ui,sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#f4ead2">'
++'<div style="font-size:12px;color:#f4ead2;opacity:.72;margin:5px 0 12px"><code>openrouter/free</code> elige automáticamente un modelo gratuito con visión. La clave se guarda solo en tu navegador.</div>'
++'<div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="ksave" style="flex:1;font:14px Georgia,serif;padding:8px 12px;border-radius:8px;border:2px solid #c8a24a;background:#c8a24a;color:#1a1410;font-weight:bold;cursor:pointer">Guardar y activar IA</button><button type="button" class="kclr" style="font:14px Georgia,serif;padding:8px 12px;border-radius:8px;border:2px solid #8a6420;background:#2a2118;color:#f4ead2;cursor:pointer">Usar modo genérico</button></div>'
++'</div>';
+document.body.appendChild(keyEl);
+const keySt=keyEl.querySelector('.kst'),keyIn=keyEl.querySelector('.kin'),keyMod=keyEl.querySelector('.kmod'),keyVis=keyEl.querySelector('.kvis');
+function actualizarKeyEstado(){
+  if(orKey){keySt.textContent='Estado: IA activa con OpenRouter (G usará visión IA)';keySt.style.background='rgba(58,107,60,.35)';keySt.style.color='#c8f0c8'}
+  else{keySt.textContent='Estado: Modo genérico (G mostrará descripciones locales)';keySt.style.background='rgba(138,100,32,.25)';keySt.style.color='#f4ead2'}
+}
+function abrirKeyModal(){
+  if(document.pointerLockElement)document.exitPointerLock();
+  clearKeys();keyIn.value=orKey;keyIn.type='password';keyMod.value=orModel||'openrouter/free';
+  actualizarKeyEstado();keyEl.style.display='flex';keyOn=true;setTimeout(()=>keyIn.focus(),0);
+}
+function cerrarKeyModal(){keyEl.style.display='none';keyOn=false}
+function guardarKeyModal(){
+  const k=keyIn.value.trim(),m=keyMod.value.trim()||'openrouter/free';
+  orKey=k;orModel=m;
+  if(k)localStorage.setItem(OR_KEY_LS,k);else localStorage.removeItem(OR_KEY_LS);
+  localStorage.setItem(OR_MODEL_LS,m);
+  cerrarKeyModal();
+  mostrarAviso(orKey?'OpenRouter activado: G ahora usará IA':'Modo genérico activado en G');
+  if(aiOn&&aiCur)abrirGuia(aiCur);
+}
+keyVis.addEventListener('click',()=>{keyIn.type=keyIn.type==='password'?'text':'password'});
+keyEl.querySelector('.kx').addEventListener('click',cerrarKeyModal);
+keyEl.querySelector('.ksave').addEventListener('click',guardarKeyModal);
+keyEl.querySelector('.kclr').addEventListener('click',()=>{
+  orKey='';localStorage.removeItem(OR_KEY_LS);keyIn.value='';cerrarKeyModal();
+  mostrarAviso('Clave eliminada: G usará descripciones genéricas');
+  if(aiOn&&aiCur)abrirGuia(aiCur);
+});
+keyEl.addEventListener('click',e=>{if(e.target===keyEl)cerrarKeyModal()});
+[keyIn,keyMod].forEach(inp=>{
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')guardarKeyModal();if(e.key==='Escape')cerrarKeyModal()});
+  inp.addEventListener('keyup',e=>e.stopPropagation());
+});
+
+// Panel G: Guía curador
+const aiEl=document.createElement('div');
+aiEl.style.cssText='position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,6,.9);z-index:9;padding:14px;box-sizing:border-box';
+aiEl.innerHTML='<div class="ai-wrap">'
++'<div class="ai-art"><img class="athumb" alt=""></div>'
++'<div class="ai-panel">'
++'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:20px">✦ Guía Serenity Art ✦</span><span class="abadge" style="font:12px system-ui,sans-serif;padding:3px 8px;border-radius:999px;border:1px solid #c8a24a;background:#2a2118;color:#f4ead2"></span></div><button type="button" class="ax" style="font:15px Georgia,serif;padding:4px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">✕</button></div>'
++'<div style="background:#241c14;border:1px solid #8a6420;border-radius:8px;padding:8px 10px"><div class="atitle" style="font-size:16px;font-weight:bold;color:#e6c36a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div><div class="asub" style="font-size:13px;color:#f4ead2;opacity:.82"></div></div>'
++'<div class="alog" style="flex:1;min-height:130px;max-height:46vh;overflow-y:auto;background:#130f0c;border:1px solid #5a3d0a;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font:14px/1.55 system-ui,sans-serif;color:#f4ead2"></div>'
++'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="button" class="avoice" style="font:13px Georgia,serif;padding:6px 11px;border-radius:8px;border:1px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">🔊 Escuchar</button><button type="button" class="aapi" style="font:13px Georgia,serif;padding:6px 11px;border-radius:8px;border:1px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">🔑 API (L)</button><button type="button" class="areg" style="display:none;font:13px Georgia,serif;padding:6px 11px;border-radius:8px;border:1px solid #c8a24a;background:#2a2118;color:#e6c36a;cursor:pointer">↻ Regenerar</button></div>'
++'<form class="aform" style="display:flex;gap:8px"><input type="text" class="aq" maxlength="240" style="flex:1;min-width:0;font:14px system-ui,sans-serif;padding:8px 10px;border-radius:8px;border:2px solid #c8a24a;background:#2a2118;color:#f4ead2"><button type="submit" class="asend" style="font:14px Georgia,serif;padding:8px 14px;border-radius:8px;border:2px solid #c8a24a;background:#c8a24a;color:#1a1410;font-weight:bold;cursor:pointer">Preguntar</button></form>'
++'</div>'
++'</div>';
+document.body.appendChild(aiEl);
+const aiBadge=aiEl.querySelector('.abadge'),aiThumb=aiEl.querySelector('.athumb'),aiTitle=aiEl.querySelector('.atitle'),aiSub=aiEl.querySelector('.asub'),
+aiLog=aiEl.querySelector('.alog'),aiVoice=aiEl.querySelector('.avoice'),aiApiBtn=aiEl.querySelector('.aapi'),aiRegBtn=aiEl.querySelector('.areg'),
+aiForm=aiEl.querySelector('.aform'),aiInput=aiEl.querySelector('.aq'),aiSend=aiEl.querySelector('.asend');
+
+function detenerVoz(){if('speechSynthesis' in window)window.speechSynthesis.cancel();aiVoice.textContent='🔊 Escuchar';ttsUtter=null}
+function textoUltimoGuia(){const items=aiLog.querySelectorAll('[data-role="guide"]');return items.length?items[items.length-1].textContent:''}
+aiVoice.addEventListener('click',()=>{
+  if(!('speechSynthesis' in window)){mostrarAviso('Tu navegador no soporta lectura en voz alta');return}
+  if(window.speechSynthesis.speaking){detenerVoz();return}
+  const txt=textoUltimoGuia();if(!txt)return;
+  ttsUtter=new SpeechSynthesisUtterance(txt);ttsUtter.lang='es-ES';ttsUtter.rate=1;
+  ttsUtter.onend=ttsUtter.onerror=()=>{aiVoice.textContent='🔊 Escuchar';ttsUtter=null};
+  aiVoice.textContent='⏹ Detener';
+  window.speechSynthesis.speak(ttsUtter);
+});
+aiApiBtn.addEventListener('click',abrirKeyModal);
+aiEl.querySelector('.ax').addEventListener('click',cerrarGuia);
+aiEl.addEventListener('click',e=>{if(e.target===aiEl||e.target.classList.contains('ai-wrap')||e.target.classList.contains('ai-art'))cerrarGuia()});
+aiInput.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')cerrarGuia()});
+aiInput.addEventListener('keyup',e=>e.stopPropagation());
+
+function addMsg(role,txt,note){
+  const box=document.createElement('div');
+  box.style.cssText='padding:8px 10px;border-radius:8px;white-space:pre-wrap;'+(role==='user'?'background:#2a2118;border:1px solid #8a6420;align-self:flex-end;max-width:88%':role==='warn'?'background:rgba(140,28,28,.3);border:1px solid #a84040;color:#ffd8d8':'background:#1f1913;border:1px solid #4a3718');
+  if(role==='guide')box.dataset.role='guide';
+  box.textContent=txt;
+  if(note){const sm=document.createElement('div');sm.style.cssText='margin-top:6px;font-size:12px;color:#e6c36a;opacity:.85';sm.textContent=note;box.appendChild(sm)}
+  aiLog.appendChild(box);aiLog.scrollTop=aiLog.scrollHeight;
+  return box;
+}
+
+function cacheKey(u){return(u.sala||'logo')+':'+(u.cuadro||0)+':'+(u.url||'')+':'+(orModel||'openrouter/free')}
+
+async function consultarOpenRouter(u,pregunta,hist){
+  const dataUrl=await imagenADataUrl(u.imgEl,u.url);
+  const sala=u.sala?(GALERIA[u.sala-1]?GALERIA[u.sala-1].sala:'Sala '+u.sala):(u.titulo||'Serenity Art');
+  const info=u.sala?`Sala: ${sala}. Cuadro #${u.cuadro}. Título/Autor en placa: ${u.nombre||'Sin nombre'}.`:`Elemento: ${u.titulo||'Logo de Serenity Art'}.`;
+  const sys='Eres el guía curador virtual de la galería de arte "Serenity Art · Proyecto de Artes". Responde siempre en español con tono cálido, claro y cultural, en 3 a 4 oraciones completas, sin listas largas, cerrando siempre con punto final. Describe únicamente lo que realmente observas en la imagen (composición, colores, luz, técnica aparente, ambiente o expresión) sin inventar objetos o detalles que no aparezcan.';
+  const msgs=[{role:'system',content:sys}];
+  if(hist&&hist.length){
+    msgs.push({role:'user',content:[{type:'text',text:`Observa esta obra (${info}) y descríbela para un visitante.`},{type:'image_url',image_url:{url:dataUrl}}]});
+    hist.forEach(h=>msgs.push(h));
+    msgs.push({role:'user',content:pregunta});
+  }else{
+    const q=pregunta||`Observa esta obra (${info}) y ofrece una descripción breve e inspiradora para un visitante de la galería.`;
+    msgs.push({role:'user',content:[{type:'text',text:q},{type:'image_url',image_url:{url:dataUrl}}]});
+  }
+  const resp=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+orKey,
+      'Content-Type':'application/json',
+      'HTTP-Referer':(location.origin&&location.origin!=='null')?location.origin:'https://serenity-art.local',
+      'X-Title':'Serenity Art'
+    },
+    body:JSON.stringify({model:orModel||'openrouter/free',max_tokens:1200,messages:msgs})
+  });
+  let data=null;try{data=await resp.json()}catch(e){}
+  if(!resp.ok){
+    const msg=(data&&data.error&&data.error.message)?data.error.message:('Error HTTP '+resp.status);
+    if(resp.status===401)throw new Error('API Key de OpenRouter inválida (401).');
+    if(resp.status===429)throw new Error('Límite temporal alcanzado en el modelo gratuito (429). Intenta de nuevo en unos segundos.');
+    throw new Error('OpenRouter ('+resp.status+'): '+msg);
+  }
+  const ch=data&&data.choices&&data.choices[0],fin=ch&&ch.finish_reason;
+  const content=ch&&ch.message&&ch.message.content;
+  let txt=Array.isArray(content)?content.map(c=>c.text||'').join('').trim():String(content||'').trim();
+  if(!txt)throw new Error('OpenRouter devolvió una respuesta vacía.');
+  if(fin==='length'&&!/[.!?…]$/.test(txt)){
+    const idx=Math.max(txt.lastIndexOf('.'),txt.lastIndexOf('!'),txt.lastIndexOf('?'));
+    txt=idx>txt.length*0.4?txt.slice(0,idx+1):txt+'…';
+  }
+  return{text:txt,model:data&&data.model};
+}
+
+function actualizarUiGuia(){
+  aiBadge.textContent=orKey?'IA · OpenRouter':'Descripción genérica';
+  aiRegBtn.style.display=orKey?'inline-block':'none';
+  aiInput.placeholder=orKey?'Pregunta algo sobre esta obra...':'Modo genérico: pulsa L para activar IA y preguntar...';
+}
+
+function cerrarGuia(){detenerVoz();aiEl.style.display='none';aiOn=false;aiBusy=false}
+
+async function abrirGuia(uOpcional,forzarRegen){
+  const u=uOpcional||obraActual();
+  if(!u){mostrarAviso('Mira un cuadro con imagen y pulsa G para consultar al guía.');return}
+  if(document.pointerLockElement)document.exitPointerLock();
+  clearKeys();detenerVoz();
+  aiCur=u;aiHist=[];aiOn=true;aiBusy=false;aiEl.style.display='flex';
+  aiThumb.src=u.url||'';
+  const sala=u.sala?(GALERIA[u.sala-1]?GALERIA[u.sala-1].sala:'Sala '+u.sala):(u.titulo||'Serenity Art');
+  aiTitle.textContent=u.nombre||u.titulo||('Cuadro '+(u.cuadro||''));
+  aiSub.textContent=u.sala?(sala+' · Cuadro '+u.cuadro):'Emblema de la galería';
+  aiLog.innerHTML='';
+  actualizarUiGuia();
+  if(!orKey){
+    addMsg('guide',descripcionGenerica(u),'Modo genérico activo. Pulsa L para ingresar tu API Key de OpenRouter y activar el guía IA.');
+    return;
+  }
+  const ck=cacheKey(u);
+  if(!forzarRegen&&aiCache[ck]){
+    aiBadge.textContent='IA · OpenRouter (caché)';
+    addMsg('guide',aiCache[ck].text,aiCache[ck].model?('Modelo: '+aiCache[ck].model):'');
+    aiHist=[{role:'assistant',content:aiCache[ck].text}];
+    return;
+  }
+  const req=++aiReqId;aiBusy=true;aiSend.disabled=true;
+  const waitBox=addMsg('guide','Observando la obra con OpenRouter...');
+  try{
+    const res=await consultarOpenRouter(u,null,null);
+    if(req!==aiReqId||!aiOn)return;
+    aiCache[ck]=res;
+    waitBox.textContent=res.text;
+    if(res.model){const sm=document.createElement('div');sm.style.cssText='margin-top:6px;font-size:12px;color:#e6c36a;opacity:.85';sm.textContent='Modelo: '+res.model;waitBox.appendChild(sm)}
+    aiHist=[{role:'assistant',content:res.text}];
+  }catch(err){
+    if(req!==aiReqId||!aiOn)return;
+    waitBox.remove();
+    addMsg('warn','No se pudo consultar a OpenRouter: '+err.message);
+    addMsg('guide',descripcionGenerica(u),'Respaldo genérico mostrado automáticamente.');
+  }finally{
+    if(req===aiReqId){aiBusy=false;aiSend.disabled=false}
+  }
+}
+
+aiRegBtn.addEventListener('click',()=>{if(aiCur&&!aiBusy)abrirGuia(aiCur,true)});
+aiForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!aiCur||aiBusy)return;
+  if(!orKey){abrirKeyModal();return}
+  const q=aiInput.value.trim();if(!q)return;
+  aiInput.value='';
+  addMsg('user',q);
+  const req=++aiReqId;aiBusy=true;aiSend.disabled=true;
+  const waitBox=addMsg('guide','Pensando...');
+  try{
+    const res=await consultarOpenRouter(aiCur,q,aiHist);
+    if(req!==aiReqId||!aiOn)return;
+    waitBox.textContent=res.text;
+    aiHist.push({role:'user',content:q},{role:'assistant',content:res.text});
+  }catch(err){
+    if(req!==aiReqId||!aiOn)return;
+    waitBox.remove();
+    addMsg('warn','No se pudo responder: '+err.message);
+  }finally{
+    if(req===aiReqId){aiBusy=false;aiSend.disabled=false}
+  }
+});
+
 addEventListener('keydown',e=>{if(!started)return;
-if(e.code==='Escape'&&tpOn)cerrarTp();
-if(e.code==='KeyM'&&!lbOn&&nb.style.display!=='flex'&&sb.style.display!=='flex'&&e.target.tagName!=='SELECT')tpOn?cerrarTp():abrirTp();
-if(e.code==='KeyV'&&e.target.tagName!=='SELECT'){if(lbOn)cerrarLb();else if(!modal())verCuadro(innerWidth/2,innerHeight/2)}
+const tag=e.target&&e.target.tagName;
+if(e.code==='Escape'){if(keyOn){cerrarKeyModal();return}if(aiOn){cerrarGuia();return}if(tpOn){cerrarTp();return}}
+if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+if(e.code==='KeyL'&&nb.style.display!=='flex'&&sb.style.display!=='flex'){keyOn?cerrarKeyModal():abrirKeyModal();return}
+if(e.code==='KeyG'&&!keyOn&&nb.style.display!=='flex'&&sb.style.display!=='flex'&&!tpOn){aiOn?cerrarGuia():abrirGuia();return}
+if(e.code==='KeyM'&&!lbOn&&!aiOn&&!keyOn&&nb.style.display!=='flex'&&sb.style.display!=='flex')tpOn?cerrarTp():abrirTp();
+if(e.code==='KeyV'&&!aiOn&&!keyOn){if(lbOn)cerrarLb();else if(!modal())verCuadro(innerWidth/2,innerHeight/2)}
 if(e.code==='KeyE'&&hmLogo&&!objetivo&&!modal()){fiT='logo';if(document.pointerLockElement)document.exitPointerLock();fi.click()}});
-function extraHint(){let s='';if(objetivo){const f=frames[objetivo.userData.sala-1]&&frames[objetivo.userData.sala-1][objetivo.userData.cuadro-1];if(f&&f.userData.url)s+=' · Clic der./V: ampliar'}
-if(hmMap)s+=' · Clic: abrir mapa';if(hmLogo)s+=' · Clic der./V: ampliar · E: cambiar logo';return s+' · M: mapa · B: catalejo'}
-const modal=()=>nb.style.display==='flex'||sb.style.display==='flex'||lbOn||tpOn;
+function extraHint(){let s='',hasArt=false;if(objetivo){const f=frames[objetivo.userData.sala-1]&&frames[objetivo.userData.sala-1][objetivo.userData.cuadro-1];if(f&&f.userData.url){s+=' · Clic der./V: ampliar';hasArt=true}}
+if(hmMap)s+=' · Clic: abrir mapa';if(hmLogo){s+=' · Clic der./V: ampliar · E: cambiar logo';if(logoUrl)hasArt=true}
+if(hasArt)s+=orKey?' · G: guía IA':' · G: guía';
+return s+' · M: mapa · B: catalejo · L: '+(orKey?'IA ✓':'API')}
+const modal=()=>nb.style.display==='flex'||sb.style.display==='flex'||lbOn||tpOn||aiOn||keyOn;
 si.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')sb.style.display='none';
 if(e.key==='Enter'){if(si.value.trim().toLowerCase()==='cuquin'){sb.style.display='none';pl.x=1110;pl.z=15;pl.y=0;yaw=0;pitch=0}else{sm.textContent='Nada ocurre... prueba otra palabra';si.value=''}}});
 si.addEventListener('keyup',e=>e.stopPropagation());
@@ -381,7 +684,7 @@ addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('mousedown',e=>{if(e.button!==2||!started)return;e.preventDefault();if(lbOn){cerrarLb();return}if(!tocar(e.clientX,e.clientY))verCuadro(e.clientX,e.clientY)});
 let tp=null;addEventListener('touchstart',e=>{const t=e.changedTouches[0];tp={x:t.clientX,y:t.clientY,t:Date.now()}});
 addEventListener('touchend',e=>{const t=e.changedTouches[0];if(tp&&started&&Date.now()-tp.t<300&&Math.hypot(t.clientX-tp.x,t.clientY-tp.y)<12&&!tocar(t.clientX,t.clientY))verCuadro(t.clientX,t.clientY);tp=null});
-addEventListener('keydown',e=>{if(e.code==='KeyX'&&pl.x>60){pl.x=-20;pl.z=7.5;pl.y=0;yaw=0;pitch=0}});
+addEventListener('keydown',e=>{if(e.code==='KeyX'&&pl.x>60&&!modal()){pl.x=-20;pl.z=7.5;pl.y=0;yaw=0;pitch=0}});
 // jugador
 const R=.4,pl={x:0,z:9,y:0};let yaw=0,pitch=0;
 const hit=(x,z)=>cols.some(c=>{if(c[4]&&(c[4]=='up')!==(pl.y>3.8))return false;const px=Math.max(c[0],Math.min(x,c[1])),pz=Math.max(c[2],Math.min(z,c[3]));return(x-px)**2+(z-pz)**2<R*R});
