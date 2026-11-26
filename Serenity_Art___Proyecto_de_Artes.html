@@ -198,7 +198,7 @@ const sg=new T.Mesh(new T.PlaneGeometry(2.2,.48),new T.MeshBasicMaterial({map:ne
 sg.position.set(cx,fy+5.4,cz);sg.rotation.y=ry;sg.translateZ(.03);scene.add(sg)});
 // ====== GRAN MARCO PARA EL LOGO (pared roja del fondo, se ve desde la entrada) ======
 // Pon aquí la ruta de tu logo, por ejemplo 'img/logo.png'  (o mira el marco y presiona E para elegirlo)
-const LOGO='';
+const LOGO='img/logo/logo.png';
 const logoGrp=new T.Group();logoGrp.position.set(0,3.05,-24.98);scene.add(logoGrp);
 {const bx=(w,h,d,z,m)=>{const q=new T.Mesh(new T.BoxGeometry(w,h,d),m);q.position.z=z;logoGrp.add(q)};
 bx(10,4.7,.12,.06,mG);bx(9.6,4.3,.14,.07,mB);bx(9.35,4.05,.15,.075,mH);bx(9.1,3.8,.16,.08,mC);
