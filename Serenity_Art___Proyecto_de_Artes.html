@@ -22,6 +22,7 @@ canvas{display:block}
 <p>Celular: dedo izquierdo mueve, dedo derecho mira, toca un cuadro para ampliarlo y mantén 🔭 para el catalejo.</p></div>
 <div id="hud">Planta baja</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 const T=THREE,scene=new T.Scene();
 const HZ=0xbfdcf2;scene.fog=new T.Fog(HZ,80,230);scene.background=new T.Color(HZ);
@@ -720,4 +721,35 @@ rc.setFromCamera({x:0,y:0},cam);const hh=rc.intersectObjects(todos)[0];objetivo=
 hud.textContent=(pl.x>60?'Salón secreto · X: salir':!inside?'Exterior':pl.y>2.6?'Segundo piso':'Planta baja')+(objetivo?` · E: imagen · N: nombre — ${GALERIA[objetivo.userData.sala-1].sala}, cuadro ${objetivo.userData.cuadro}`:'')+extraHint();
 ren.render(scene,cam)}
 requestAnimationFrame(loop);
+
+// ====== ESTATUA 3D (modelo .glb) ======
+// Cambia estos valores para moverla, agrandarla o girarla.
+const ESTATUA={
+  archivo:'modelos/base_basic_shaded.glb', // o 'modelos/base_basic_pbr.glb'
+  x:0, z:-13,      // centro del segundo piso
+  piso:H,          // altura del piso donde se apoya (H = segundo piso, 0 = planta baja)
+  altura:4.4,      // altura de la estatua en metros (el modelo original mide 1.71)
+  giro:0,          // rotación en radianes: 0, Math.PI/2, Math.PI, -Math.PI/2...
+  pedestal:.7      // altura del pedestal
+};
+{
+  const E=ESTATUA,k=E.altura/1.7121,hw=.48*k+.25,hd=.585*k+.25,up=E.piso>0?'up':undefined;
+  B(E.x-hw-.2,E.x+hw+.2,E.piso,E.piso+.12,E.z-hd-.2,E.z+hd+.2,stone);                 // base ancha
+  B(E.x-hw,E.x+hw,E.piso+.12,E.piso+E.pedestal,E.z-hd,E.z+hd,trim);                   // pedestal
+  cols.push(up?[E.x-hw,E.x+hw,E.z-hd,E.z+hd,up]:[E.x-hw,E.x+hw,E.z-hd,E.z+hd]);      // colisión
+  new T.GLTFLoader().load(E.archivo,gltf=>{
+    const m=gltf.scene;
+    m.scale.setScalar(k);
+    m.rotation.y=E.giro;
+    m.updateMatrixWorld(true);
+    const bb=new T.Box3().setFromObject(m),c=bb.getCenter(new T.Vector3());
+    // centrar el modelo sobre el pedestal (por su caja) y apoyarlo en la base
+    m.position.set(E.x-c.x,E.piso+E.pedestal-bb.min.y,E.z-c.z);
+    m.traverse(o=>{if(o.isMesh){
+      // el resto de tu escena trabaja sin conversión de color; igualamos para que no se vea oscura
+      ['map','emissiveMap'].forEach(p=>{if(o.material[p])o.material[p].encoding=T.LinearEncoding});
+      o.material.needsUpdate=true}});
+    scene.add(m);
+  },undefined,err=>console.error('No se pudo cargar la estatua. ¿Estás usando un servidor local (no file://) y está en '+E.archivo+'?',err));
+}
 </script></body></html>
