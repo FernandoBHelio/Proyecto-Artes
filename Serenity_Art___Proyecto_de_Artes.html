@@ -725,26 +725,28 @@ requestAnimationFrame(loop);
 // ====== ESTATUA 3D (modelo .glb) ======
 // Cambia estos valores para moverla, agrandarla o girarla.
 const ESTATUA={
-  archivo:'modelos/base_basic_shaded.glb', // o 'modelos/base_basic_pbr.glb'
-  x:0, z:-13,      // centro del segundo piso
-  piso:H,          // altura del piso donde se apoya (H = segundo piso, 0 = planta baja)
-  altura:4.4,      // altura de la estatua en metros (el modelo original mide 1.71)
-  giro:0,          // rotación en radianes: 0, Math.PI/2, Math.PI, -Math.PI/2...
-  pedestal:.7      // altura del pedestal
+  archivo:'modelos/trabajo.glb',
+  x:1110, z:0,     // centro exacto del Salón de la Fama
+  piso:0,          // piso principal del salón secreto
+  altura:7.5,      // estatua grande
+  giro:0,          // rotación en radianes
+  pedestal:1.1     // altura del pedestal
 };
 {
-  const E=ESTATUA,k=E.altura/1.7121,hw=.48*k+.25,hd=.585*k+.25,up=E.piso>0?'up':undefined;
-  B(E.x-hw-.2,E.x+hw+.2,E.piso,E.piso+.12,E.z-hd-.2,E.z+hd+.2,stone);                 // base ancha
-  B(E.x-hw,E.x+hw,E.piso+.12,E.piso+E.pedestal,E.z-hd,E.z+hd,trim);                   // pedestal
-  cols.push(up?[E.x-hw,E.x+hw,E.z-hd,E.z+hd,up]:[E.x-hw,E.x+hw,E.z-hd,E.z+hd]);      // colisión
+  const E=ESTATUA,hw=1.55,hd=1.55;
+  B(E.x-hw-.35,E.x+hw+.35,E.piso,E.piso+.18,E.z-hd-.35,E.z+hd+.35,stone);
+  B(E.x-hw,E.x+hw,E.piso+.18,E.piso+E.pedestal,E.z-hd,E.z+hd,trim);
+  cols.push([E.x-hw,E.x+hw,E.z-hd,E.z+hd]);
   new T.GLTFLoader().load(E.archivo,gltf=>{
     const m=gltf.scene;
-    m.scale.setScalar(k);
     m.rotation.y=E.giro;
     m.updateMatrixWorld(true);
+    const originalBox=new T.Box3().setFromObject(m);
+    const originalSize=originalBox.getSize(new T.Vector3());
+    if(originalSize.y>0)m.scale.setScalar(E.altura/originalSize.y);
+    m.updateMatrixWorld(true);
     const bb=new T.Box3().setFromObject(m),c=bb.getCenter(new T.Vector3());
-    // centrar el modelo sobre el pedestal (por su caja) y apoyarlo en la base
-    m.position.set(E.x-c.x,E.piso+E.pedestal-bb.min.y,E.z-c.z);
+    m.position.set(E.x-c.x,E.piso+E.pedestal-bb.min.y,E.z-c.z+2.5);
     m.traverse(o=>{if(o.isMesh){
       // el resto de tu escena trabaja sin conversión de color; igualamos para que no se vea oscura
       ['map','emissiveMap'].forEach(p=>{if(o.material[p])o.material[p].encoding=T.LinearEncoding});
