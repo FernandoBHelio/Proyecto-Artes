@@ -754,4 +754,35 @@ const ESTATUA={
     scene.add(m);
   },undefined,err=>console.error('No se pudo cargar la estatua. ¿Estás usando un servidor local (no file://) y está en '+E.archivo+'?',err));
 }
+
+// Estatua principal del segundo piso
+const ESTATUA_SEGUNDO_PISO={
+  archivo:'modelos/base_basic_shaded.glb',
+  x:0, z:-13.5,
+  piso:H,
+  altura:4.8,
+  giro:0,
+  pedestal:1.1
+};
+{
+  const E=ESTATUA_SEGUNDO_PISO,hw=1.55,hd=1.55;
+  B(E.x-hw-.35,E.x+hw+.35,E.piso,E.piso+.18,E.z-hd-.35,E.z+hd+.35,stone);
+  B(E.x-hw,E.x+hw,E.piso+.18,E.piso+E.pedestal,E.z-hd,E.z+hd,trim);
+  cols.push([E.x-hw,E.x+hw,E.z-hd,E.z+hd,'up']);
+  new T.GLTFLoader().load(E.archivo,gltf=>{
+    const m=gltf.scene;
+    m.rotation.y=E.giro;
+    m.updateMatrixWorld(true);
+    const originalBox=new T.Box3().setFromObject(m);
+    const originalSize=originalBox.getSize(new T.Vector3());
+    if(originalSize.y>0)m.scale.setScalar(E.altura/originalSize.y);
+    m.updateMatrixWorld(true);
+    const bb=new T.Box3().setFromObject(m),c=bb.getCenter(new T.Vector3());
+    m.position.set(E.x-c.x,E.piso+E.pedestal-bb.min.y,E.z-c.z);
+    m.traverse(o=>{if(o.isMesh){
+      ['map','emissiveMap'].forEach(p=>{if(o.material[p])o.material[p].encoding=T.LinearEncoding});
+      o.material.needsUpdate=true}});
+    scene.add(m);
+  },undefined,err=>console.error('No se pudo cargar la estatua del segundo piso. ¿Estás usando un servidor local (no file://) y está en '+E.archivo+'?',err));
+}
 </script></body></html>
